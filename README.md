@@ -1,4 +1,4 @@
-# pico_copter
+# ikaring(pico_copter)
 Flightcontrol system for quadcopter using Raspberry Pi Pico
 
 ### Raspberry Pi Pico
