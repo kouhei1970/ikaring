@@ -48,6 +48,7 @@ int main(void)
   while(1)
   {
     //printf("Arm_flag:%d LockMode:%d\n",Arm_flag, LockMode);
+    //channel_output();
     tight_loop_contents();
     while (Logoutputflag==1){
       log_output();

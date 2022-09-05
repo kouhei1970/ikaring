@@ -71,7 +71,7 @@ void pwm_init()
     pwm_set_chan_level(Slice_num_rear,  PWM_CHAN_A, DUTYMIN);
     pwm_set_chan_level(Slice_num_rear,  PWM_CHAN_B, DUTYMIN);
     pwm_set_chan_level(Slice_num_rear,  PWM_CHAN_B, DUTYMIN);
-    pwm_set_chan_level(Slice_num_servo, PWM_CHAN_A, 625);
+    pwm_set_chan_level(Slice_num_servo, PWM_CHAN_A, SERVO_HOOK);
 
     sleep_ms(1000);
 }
@@ -121,12 +121,12 @@ void set_duty_rl(float duty)
     //printf("%4.0f ", duty);
 }
 
-void servo_on(void)
+void payload_hook(void)
 {
-
+    pwm_set_chan_level(Slice_num_servo, PWM_CHAN_A, SERVO_HOOK);
 }
 
-void servo_off(void)
+void payload_relese(void)
 {
-    
+    pwm_set_chan_level(Slice_num_servo, PWM_CHAN_A, SERVO_RELEASE);
 }

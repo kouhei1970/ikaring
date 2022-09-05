@@ -24,8 +24,8 @@ float Phi,Theta,Psi;
 float Phi_ref=0.0,Theta_ref=0.0,Psi_ref=0.0;
 float Elevator_center=0.0, Aileron_center=0.0, Rudder_center=0.0;
 float Pref=0.0,Qref=0.0,Rref=0.0;
-const float Phi_trim   = 0.01;
-const float Theta_trim = 0.02;
+const float Phi_trim   = 0.0;
+const float Theta_trim = -0.01;
 const float Psi_trim   = 0.0;
 
 //Extended Kalman filter 
@@ -51,9 +51,11 @@ float Logdata[LOGDATANUM]={0.0};
 
 //State Machine
 uint8_t LockMode=0;
-float Disable_duty =0.10;
-float Flight_duty  =0.18;//0.2/////////////////
 uint8_t OverG_flag = 0;
+//float Flight_duty  =0.18;//0.2/////////////////
+float Motor_on_duty_threshold = 0.2;
+float Rate_control_on_duty_threshold = 0.31;
+float Angle_control_on_duty_threshold = 0.32;
 
 //PID object and etc.
 Filter acc_filter;
@@ -91,6 +93,8 @@ void loop_400Hz(void)
   //割り込みフラグリセット
   pwm_clear_irq(2);
 
+  //Servo Control
+  servo_control();
 
   if (Arm_flag==0)
   {
@@ -209,8 +213,6 @@ void loop_400Hz(void)
    
     //Rate Control (400Hz)
     rate_control();
-
-    servo_control();
    
     if(AngleControlCounter==4)
     {
@@ -284,9 +286,27 @@ void loop_400Hz(void)
   D_time=E_time-S_time;
 }
 
+///////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+//
+// Set PID Gain
+//
+//
 void control_init(void)
 {
   acc_filter.set_parameter(0.005, 0.0025);
+  
+  //Rate control
+  p_pid.set_parameter(  1.5, 1.45, 0.01, 0.003, 0.0025);//3.4
+  q_pid.set_parameter(  1.5, 1.45, 0.01, 0.003, 0.0025);//3.8
+  r_pid.set_parameter(  1.5, 1.00, 0.01, 0.010, 0.0025);//9.4
+  //Angle control
+  phi_pid.set_parameter  ( 2.5, 9.5, 0.005, 0.018, 0.01);//6.0
+  theta_pid.set_parameter( 2.5, 9.5, 0.005, 0.018, 0.01);//6.0
+  psi_pid.set_parameter  ( 0.0, 10000.0, 0.010, 0.002, 0.01);
+
+/*
   //Rate control
   p_pid.set_parameter( 2.0, 0.145, 0.028, 0.015, 0.0025);//3.4
   q_pid.set_parameter( 2.1, 0.125, 0.028, 0.015, 0.0025);//3.8
@@ -295,14 +315,8 @@ void control_init(void)
   phi_pid.set_parameter  ( 5.5, 9.5, 0.025, 0.018, 0.01);//6.0
   theta_pid.set_parameter( 5.5, 9.5, 0.025, 0.018, 0.01);//6.0
   psi_pid.set_parameter  ( 0.0, 10.0, 0.010, 0.03, 0.01);
-  //Rate control
-  //p_pid.set_parameter(3.3656, 0.1, 0.0112, 0.01, 0.0025);
-  //q_pid.set_parameter(3.8042, 0.1, 0.0111, 0.01, 0.0025);
-  //r_pid.set_parameter(9.4341, 0.11, 0.0056, 0.01, 0.0025);
-  //Angle control
-  //phi_pid.set_parameter  ( 9.0   , 0.07, 0.0352,  0.01, 0.01);
-  //theta_pid.set_parameter( 8.5583, 0.1 , 0.0552,  0.01, 0.01);
-  //psi_pid.set_parameter  ( 9.0256, 0.11, 0.0034,  0.01, 0.01);
+*/
+
 }
 
 uint8_t lock_com(void)
@@ -361,6 +375,12 @@ void motor_stop(void)
   set_duty_rl(0.0);
 }
 
+void servo_control(void)
+{
+  if (Chdata[SERVO] > (SERVO_MAX+SERVO_MIN)/2 ) payload_hook();
+  if (Chdata[SERVO] < (SERVO_MAX+SERVO_MIN)/2 ) payload_relese();
+}
+
 void rate_control(void)
 {
   float p_rate, q_rate, r_rate;
@@ -384,7 +404,7 @@ void rate_control(void)
   p_ref = Pref;
   q_ref = Qref;
   r_ref = Rref;
-  T_ref = 0.6 * BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
+  T_ref = BATTERY_VOLTAGE*(float)(Chdata[2]-CH3MIN)/(CH3MAX-CH3MIN);
 
   //Error
   p_err = p_ref - p_rate;
@@ -399,19 +419,19 @@ void rate_control(void)
   //Motor Control
   // 1250/11.1=112.6
   // 1/11.1=0.0901
+  // 1/7.4 = 0.135135
   
-  FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.0901;
-  FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.0901;
-  RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.0901;
-  RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.0901;
-  //FR_duty = (T_ref)*0.0901;
-  //FL_duty = (T_ref)*0.0901;
-  //RR_duty = (T_ref)*0.0901;
-  //RL_duty = (T_ref)*0.0901;
+  FR_duty = (T_ref +(-P_com +Q_com -R_com)*0.25)*0.135135;//+Theta_trim;
+  FL_duty = (T_ref +( P_com +Q_com +R_com)*0.25)*0.135135;//+Theta_trim;
+  RR_duty = (T_ref +(-P_com -Q_com +R_com)*0.25)*0.135135;//-Theta_trim;
+  RL_duty = (T_ref +( P_com -Q_com -R_com)*0.25)*0.135135;//-Theta_trim;
+  //FR_duty = (T_ref)*0.135135+Theta_trim;
+  //FL_duty = (T_ref)*0.135135+Theta_trim;
+  //RR_duty = (T_ref)*0.135135-Theta_trim;
+  //RL_duty = (T_ref)*0.135135-Theta_trim;
   
-  float minimum_duty=0.1;
-  const float maximum_duty=0.95;
-  minimum_duty = Disable_duty;
+  const float minimum_duty=0.01;
+  const float maximum_duty=0.98;
 
   if (FR_duty < minimum_duty) FR_duty = minimum_duty;
   if (FR_duty > maximum_duty) FR_duty = maximum_duty;
@@ -426,7 +446,7 @@ void rate_control(void)
   if (RL_duty > maximum_duty) RL_duty = maximum_duty;
 
   //Duty set
-  if(T_ref/BATTERY_VOLTAGE < Disable_duty)
+  if(T_ref/BATTERY_VOLTAGE < Motor_on_duty_threshold)
   {
     motor_stop();
     p_pid.reset();
@@ -442,6 +462,20 @@ void rate_control(void)
     Theta_bias = Theta;
     Psi_bias   = Psi;
   }
+  /*
+  else if(T_ref/BATTERY_VOLTAGE < Rate_control_on_duty_threshold)
+  {
+    if (OverG_flag==0){
+      set_duty_fr(FR_duty);
+      set_duty_fl(FL_duty);
+      set_duty_rr(RR_duty);
+      set_duty_rl(RL_duty);      
+    }
+    Pref=0.0;
+    Qref=0.0;
+    Rref=0.0;
+  }
+  */
   else
   {
     if (OverG_flag==0){
@@ -453,7 +487,6 @@ void rate_control(void)
     else motor_stop();
     //printf("%12.5f %12.5f %12.5f %12.5f\n",FR_duty, FL_duty, RR_duty, RL_duty);
   }
- 
   //printf("\n");
 
   //printf("%12.5f %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f\n", 
@@ -502,7 +535,7 @@ void angle_control(void)
     psi_err   = Psi_ref   - (Psi   - Psi_bias);
     
     //PID Control
-    if (T_ref/BATTERY_VOLTAGE < Flight_duty)
+    if (T_ref/BATTERY_VOLTAGE < Angle_control_on_duty_threshold)
     {
       Pref=0.0;
       Qref=0.0;
@@ -510,9 +543,9 @@ void angle_control(void)
       phi_pid.reset();
       theta_pid.reset();
       psi_pid.reset();
-      Aileron_center  = Chdata[3];
-      Elevator_center = Chdata[1];
-      Rudder_center   = Chdata[0];
+      //Aileron_center  = Chdata[3];
+      //Elevator_center = Chdata[1];
+      //Rudder_center   = Chdata[0];
       /////////////////////////////////////
       Phi_bias   = Phi;
       Theta_bias = Theta;

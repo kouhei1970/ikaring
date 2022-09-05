@@ -152,3 +152,12 @@ void on_uart_rx(void) {
     }
 }
 
+void channel_output(void)
+{
+    for(uint8_t i=0;i<18;i++)
+    {
+        printf("ch%2d:%4d ",i+1,Chdata[i]);
+    }
+    printf("\n");
+}
+

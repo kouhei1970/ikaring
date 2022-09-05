@@ -21,6 +21,10 @@
 #define CH5MIN 368
 #define CH6MAX 1638
 #define CH6MIN 368
+#define SERVO_MIN 144
+#define SERVO_MAX 1904
+
+#define SERVO 7
 
 
 //０番と1番ピンに接続
@@ -32,3 +36,4 @@ extern uint16_t Chdata[18];
 
 //グローバル関数の宣言
 void radio_init(void);
+void channel_output(void);

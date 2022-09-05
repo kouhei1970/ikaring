@@ -15,6 +15,9 @@
 //#define DUTYMAX 2500
 #define DUTYMIN 1375
 #define DUTYMAX 2375
+//#define SERVO_HOOK 1813
+#define SERVO_HOOK 1800
+#define SERVO_RELEASE 625
 
 //グローバル変数
 extern uint8_t ESC_calib;
@@ -25,7 +28,7 @@ void set_duty_fr(float duty);
 void set_duty_fl(float duty);
 void set_duty_rr(float duty);
 void set_duty_rl(float duty);
-void servo_on(void);
-void servo_off(void);
+void payload_hook(void);
+void payload_relese(void);
 
 #endif

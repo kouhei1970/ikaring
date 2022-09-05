@@ -17,7 +17,7 @@ using Eigen::Matrix;
 using Eigen::PartialPivLU;
 using namespace Eigen;
 
-#define BATTERY_VOLTAGE (11.1)
+#define BATTERY_VOLTAGE (7.4)
 
 
 //グローバル関数の宣言
