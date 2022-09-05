@@ -120,3 +120,13 @@ void set_duty_rl(float duty)
     pwm_set_chan_level(Slice_num_rear, PWM_CHAN_A, duty);
     //printf("%4.0f ", duty);
 }
+
+void servo_on(void)
+{
+
+}
+
+void servo_off(void)
+{
+    
+}

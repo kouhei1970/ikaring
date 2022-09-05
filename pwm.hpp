@@ -25,5 +25,7 @@ void set_duty_fr(float duty);
 void set_duty_fl(float duty);
 void set_duty_rr(float duty);
 void set_duty_rl(float duty);
+void servo_on(void);
+void servo_off(void);
 
 #endif
