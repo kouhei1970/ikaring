@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 include(pico_sdk_import.cmake)
 
-project(pico_copter C CXX ASM)
+project(ikaring C CXX ASM)
 set(CMAKE_C_STNDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -11,7 +11,7 @@ set(PICO_EXAMPLES_PATH ${PROJECT_SOURCE_DIR})
 pico_sdk_init()
 include_directories(/Users/itoukouhei/pico/eigen)
 
-add_executable(pico_copter
+add_executable(ikaring
   pico_copter.cpp
   sensor.cpp
   ekf.cpp
@@ -21,15 +21,15 @@ add_executable(pico_copter
   control.cpp
 )
 
-target_link_libraries(pico_copter 
+target_link_libraries(ikaring 
   hardware_spi 
   hardware_pwm 
   hardware_uart 
   pico_stdlib
   pico_multicore)
 
-pico_enable_stdio_usb(pico_copter 1)
-pico_enable_stdio_uart(pico_copter 0)
+pico_enable_stdio_usb(ikaring 1)
+pico_enable_stdio_uart(ikaring 0)
 
-pico_add_extra_outputs(pico_copter)
+pico_add_extra_outputs(ikaring)
 
