@@ -9,18 +9,18 @@
 #define DATA_BITS 8
 #define STOP_BITS 2
 #define PARITY UART_PARITY_EVEN
-#define CH1MAX 1771
-#define CH1MIN 278
-#define CH2MAX 1756
-#define CH2MIN 316
-#define CH3MAX 1721
-#define CH3MIN 312
-#define CH4MAX 1745
-#define CH4MIN 291
-#define CH5MAX 1904
-#define CH5MIN 144
-#define CH6MAX 1904
-#define CH6MIN 144
+#define CH1MAX 1680
+#define CH1MIN 368
+#define CH2MAX 1680
+#define CH2MIN 368
+#define CH3MAX 1638
+#define CH3MIN 368
+#define CH4MAX 1638
+#define CH4MIN 368
+#define CH5MAX 1638
+#define CH5MIN 368
+#define CH6MAX 1638
+#define CH6MIN 368
 
 
 //０番と1番ピンに接続
