@@ -76,6 +76,7 @@ void motor_stop(void);
 uint8_t lock_com(void);
 uint8_t logdata_out_com(void);
 void printPQR(void);
+void servo_control(void);
 
 #define AVERAGE 2000
 #define KALMANWAIT 6000
@@ -208,6 +209,8 @@ void loop_400Hz(void)
    
     //Rate Control (400Hz)
     rate_control();
+
+    servo_control();
    
     if(AngleControlCounter==4)
     {
