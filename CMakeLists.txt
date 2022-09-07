@@ -19,13 +19,16 @@ add_executable(ikaring
   pwm.cpp
   radio.cpp
   control.cpp
+  WS2812.cpp
 )
+pico_generate_pio_header(ikaring ${CMAKE_CURRENT_LIST_DIR}/WS2812.pio)
 
 target_link_libraries(ikaring 
   hardware_spi 
   hardware_pwm 
   hardware_uart 
   pico_stdlib
+  hardware_pio
   pico_multicore)
 
 pico_enable_stdio_usb(ikaring 1)

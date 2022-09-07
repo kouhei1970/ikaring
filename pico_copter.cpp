@@ -31,6 +31,9 @@ int main(void)
   ESC_calib=0;
   pwm_init();
 
+  //RGB LED Light
+  //rgbled_nomal();
+
   while(start_wait)
   {
     start_wait--;
@@ -50,6 +53,9 @@ int main(void)
     //printf("Arm_flag:%d LockMode:%d\n",Arm_flag, LockMode);
     //channel_output();
     tight_loop_contents();
+    printf("Push enter key to change pid gains in 5 second.");
+    
+
     while (Logoutputflag==1){
       log_output();
     }

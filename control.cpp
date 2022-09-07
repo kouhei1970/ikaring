@@ -1,4 +1,6 @@
 #include "control.hpp"
+#include "WS2812.hpp"
+
 
 //Sensor data
 float Ax,Ay,Az,Wp,Wq,Wr,Mx,My,Mz,Mx0,My0,Mz0,Mx_ave,My_ave,Mz_ave;
@@ -54,8 +56,8 @@ uint8_t LockMode=0;
 uint8_t OverG_flag = 0;
 //float Flight_duty  =0.18;//0.2/////////////////
 float Motor_on_duty_threshold = 0.2;
-float Rate_control_on_duty_threshold = 0.31;
-float Angle_control_on_duty_threshold = 0.32;
+float Rate_control_on_duty_threshold = 0.23;
+float Angle_control_on_duty_threshold = 0.25;
 
 //PID object and etc.
 Filter acc_filter;
@@ -65,6 +67,17 @@ PID r_pid;
 PID phi_pid;
 PID theta_pid;
 PID psi_pid;
+
+WS2812 ledStrip(
+    RGBLED_PIN,         // Data line is connected to pin 0. (GP0)
+    RGBLED_LENGTH,      // Strip is 6 LEDs long.
+    pio0,               // Use PIO 0 for creating the state machine.
+    0,                  // Index of the state machine that will be created for controlling the LED strip
+                        // You can have 4 state machines per PIO-Block up to 8 overall.
+                        // See Chapter 3 in: https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf
+    WS2812::FORMAT_GRB  // Pixel format used by the LED strip
+);
+
 
 void loop_400Hz(void);
 void rate_control(void);
@@ -79,6 +92,11 @@ uint8_t lock_com(void);
 uint8_t logdata_out_com(void);
 void printPQR(void);
 void servo_control(void);
+void rgbled_nomal(void);
+void rgbled_green(void);
+void rgbled_off(void);
+void rgbled(uint8_t);
+void rgbled_wait(void);
 
 #define AVERAGE 2000
 #define KALMANWAIT 6000
@@ -113,6 +131,7 @@ void loop_400Hz(void)
   else if (Arm_flag==1)
   {
     motor_stop();
+    rgbled_wait();
     //Gyro Bias Estimate
     if (BiasCounter < AVERAGE)
     {
@@ -188,9 +207,11 @@ void loop_400Hz(void)
         LockMode=3;//Disenable Flight
         led=0;
         gpio_put(LED_PIN,led);
+        rgbled(led);
         return;
       }
       //Goto Flight
+      rgbled_nomal();
     }
     else if(LockMode==3)
     {
@@ -202,6 +223,7 @@ void loop_400Hz(void)
     }
     //LED Blink
     gpio_put(LED_PIN, led);
+    rgbled(led);
     if(Logflag==1&&LedBlinkCounter<100){
       LedBlinkCounter++;
     }
@@ -228,11 +250,13 @@ void loop_400Hz(void)
     OverG_flag = 0;
     if(LedBlinkCounter<10){
       gpio_put(LED_PIN, 1);
+      rgbled(1);
       LedBlinkCounter++;
     }
     else if(LedBlinkCounter<100)
     {
       gpio_put(LED_PIN, 0);
+      rgbled(0);
       LedBlinkCounter++;
     }
     else LedBlinkCounter=0;
@@ -273,6 +297,7 @@ void loop_400Hz(void)
     Logoutputflag=1;
     //LED Blink
     gpio_put(LED_PIN, led);
+    rgbled(led);
     if(LedBlinkCounter<400){
       LedBlinkCounter++;
     }
@@ -883,6 +908,73 @@ void kalman_filter(void)
   ekf(Xp, Xe, P, Z, Omega_m, Q, R, G*dt, Beta, dt);
 }
 
+void rgbled_nomal(void)
+{
+  ledStrip.setPixelColor(0, WS2812::RGB(128,128,0));
+  ledStrip.setPixelColor(1, WS2812::RGB(128,128,0));
+  ledStrip.setPixelColor(2, WS2812::RGB(128,128,0));
+  ledStrip.setPixelColor(3, WS2812::RGB(128,128,0));
+  ledStrip.setPixelColor(4, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(5, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(6, WS2812::RGB(128,0,128));
+  ledStrip.setPixelColor(7, WS2812::RGB(128,0,128));
+  ledStrip.setPixelColor(8, WS2812::RGB(0,0,128));
+  ledStrip.setPixelColor(9, WS2812::RGB(0,0,128));
+  ledStrip.show();
+}
+
+void rgbled_green(void)
+{
+  ledStrip.setPixelColor(0, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(1, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(2, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(3, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(4, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(5, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(6, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(7, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(8, WS2812::RGB(0,128,0));
+  ledStrip.setPixelColor(9, WS2812::RGB(0,128,0));
+  ledStrip.show();
+}
+
+void rgbled_off(void)
+{
+  ledStrip.setPixelColor(0, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(1, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(2, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(3, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(4, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(5, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(6, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(7, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(8, WS2812::RGB(0,0,0));
+  ledStrip.setPixelColor(9, WS2812::RGB(0,0,0));
+  ledStrip.show();
+}
+
+void rgbled(uint8_t flag)
+{
+  if (flag ==1)rgbled_green();
+  else rgbled_off();
+}
+
+void rgbled_wait(void)
+{
+  static uint8_t index=0;
+  static uint8_t counter = 0;
+  if(counter>100)
+  {
+    ledStrip.setPixelColor(index, WS2812::RGB(0,0,0));
+    index++;
+    if(index<10)index=0;
+    ledStrip.setPixelColor(index, WS2812::RGB(0,0,50));
+    counter = 0;
+  }
+  counter ++;
+
+
+}
 
 PID::PID()
 {
