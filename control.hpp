@@ -29,6 +29,7 @@ void gyro_calibration(void);
 void variable_init(void);
 void log_output(void);
 void rgbled_nomal(void);
+void rgbled_off(void);
 
 //グローバル変数
 extern uint8_t LockMode;

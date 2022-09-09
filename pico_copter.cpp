@@ -6,7 +6,7 @@ semaphore_t sem;
 
 int main(void)
 {
-  int start_wait=5;
+  int start_wait=3;
   
   gpio_init(LED_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
@@ -22,7 +22,10 @@ int main(void)
   
   //Initialize Variavle
   variable_init();
-  
+
+  //RGB LED off
+  rgbled_off();
+
   //Initilize Control
   control_init();
   
@@ -30,9 +33,6 @@ int main(void)
   //Start 400Hz Interval
   ESC_calib=0;
   pwm_init();
-
-  //RGB LED Light
-  //rgbled_nomal();
 
   while(start_wait)
   {
@@ -53,7 +53,7 @@ int main(void)
     //printf("Arm_flag:%d LockMode:%d\n",Arm_flag, LockMode);
     //channel_output();
     tight_loop_contents();
-    printf("Push enter key to change pid gains in 5 second.");
+    //printf("Push enter key to change pid gains in 5 second.");
     
 
     while (Logoutputflag==1){

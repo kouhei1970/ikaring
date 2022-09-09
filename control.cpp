@@ -98,8 +98,8 @@ void rgbled_off(void);
 void rgbled(uint8_t);
 void rgbled_wait(void);
 
-#define AVERAGE 2000
-#define KALMANWAIT 6000
+#define AVERAGE 400
+#define KALMANWAIT 2000
 
 //Main loop
 //This function is called from PWM Intrupt on 400Hz.
@@ -117,6 +117,7 @@ void loop_400Hz(void)
   if (Arm_flag==0)
   {
       //motor_stop();
+      rgbled_wait();
       Elevator_center = 0.0;
       Aileron_center = 0.0;
       Rudder_center = 0.0;
@@ -211,7 +212,7 @@ void loop_400Hz(void)
         return;
       }
       //Goto Flight
-      rgbled_nomal();
+      if(!Logflag)rgbled_nomal();
     }
     else if(LockMode==3)
     {
@@ -961,17 +962,18 @@ void rgbled(uint8_t flag)
 
 void rgbled_wait(void)
 {
-  static uint8_t index=0;
-  static uint8_t counter = 0;
-  if(counter>100)
+  static uint8_t index=9;
+  static uint16_t counter = 0;
+  if(counter==0)
   {
     ledStrip.setPixelColor(index, WS2812::RGB(0,0,0));
-    index++;
-    if(index<10)index=0;
+    if(index<10)index++;
+    else index=0;
     ledStrip.setPixelColor(index, WS2812::RGB(0,0,50));
-    counter = 0;
+    ledStrip.show();
   }
   counter ++;
+  if(counter==20)counter =0;
 
 
 }
