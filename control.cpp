@@ -403,8 +403,8 @@ void motor_stop(void)
 
 void servo_control(void)
 {
-  if (Chdata[SERVO] > (SERVO_MAX+SERVO_MIN)/2 ) payload_hook();
-  if (Chdata[SERVO] < (SERVO_MAX+SERVO_MIN)/2 ) payload_relese();
+  if (Chdata[SERVO] > (SERVO_MAX+SERVO_MIN)/2 ) payload_relese();
+  if (Chdata[SERVO] < (SERVO_MAX+SERVO_MIN)/2 ) payload_hook();
 }
 
 void rate_control(void)
