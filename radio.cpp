@@ -12,6 +12,7 @@ uint16_t chars_rxed = 0;
 uint16_t data_num=0;
 uint8_t sbus_data[25];
 uint8_t ch;
+uint16_t Safty_flag=0;
 
 //ローカル関数の宣言
 void on_uart_rx(); 
@@ -139,6 +140,7 @@ void on_uart_rx(void) {
                 break;
             case 24:
                 Chdata[16] = sbus_data[23];
+                Safty_flag=Chdata[16];
                 //printf("%04x ",Chdata[16]);
                 break;
         }

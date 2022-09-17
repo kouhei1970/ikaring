@@ -10,6 +10,7 @@
 #include <Eigen/Dense>
 #include "ekf.hpp"
 #include <math.h>
+#include "rgbled.hpp"
 
 using Eigen::MatrixXd;
 using Eigen::MatrixXf;
@@ -18,6 +19,10 @@ using Eigen::PartialPivLU;
 using namespace Eigen;
 
 #define BATTERY_VOLTAGE (7.4)
+#define NORMAL 0
+#define ROCKING 1
+#define LANDING 2
+#define REDCIRCLE 3
 
 
 //グローバル関数の宣言

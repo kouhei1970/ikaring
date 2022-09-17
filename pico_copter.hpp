@@ -11,11 +11,11 @@
 #include "pwm.hpp"
 #include "radio.hpp"
 #include "control.hpp"
+#include "i2c.hpp"
+#include "rgbled.hpp"
 #include <math.h>
 
 #define LED_PIN 25
-#define RGBLED_PIN 16
-#define RGBLED_LENGTH 10
 #define MAINLOOP loop_400Hz
 
 //グローバル変数

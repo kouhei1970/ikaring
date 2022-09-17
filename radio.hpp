@@ -1,3 +1,5 @@
+#ifndef RADIO_HPP
+#define RADIO_HPP
 
 #include <stdio.h>
 #include "pico/stdlib.h"
@@ -24,6 +26,9 @@
 #define SERVO_MIN 144
 #define SERVO_MAX 1904
 
+#define MODE_SW 4
+#define LANDING_SW 5
+#define LOG 8
 #define SERVO 7
 
 
@@ -33,7 +38,10 @@
 
 //グローバル変数の宣言
 extern uint16_t Chdata[18];
+extern uint16_t Safty_flag;
 
 //グローバル関数の宣言
 void radio_init(void);
 void channel_output(void);
+
+#endif

@@ -20,11 +20,14 @@ int main(void)
   //Initialize Radio
   radio_init();
   
-  //Initialize Variavle
+  //Initialize Variable
   variable_init();
 
   //RGB LED off
   rgbled_off();
+
+  //Initialize I2C
+  copter_i2c_init();
 
   //Initilize Control
   control_init();

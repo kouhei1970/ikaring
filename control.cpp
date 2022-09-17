@@ -1,6 +1,4 @@
 #include "control.hpp"
-#include "WS2812.hpp"
-
 
 //Sensor data
 float Ax,Ay,Az,Wp,Wq,Wr,Mx,My,Mz,Mx0,My0,Mz0,Mx_ave,My_ave,Mz_ave;
@@ -54,10 +52,13 @@ float Logdata[LOGDATANUM]={0.0};
 //State Machine
 uint8_t LockMode=0;
 uint8_t OverG_flag = 0;
+uint8_t Flight_mode = 0;//0:Normal 1:Rocking wings 2:Landing
+float Rocking_timer = 0.0;
 //float Flight_duty  =0.18;//0.2/////////////////
 float Motor_on_duty_threshold = 0.2;
 float Rate_control_on_duty_threshold = 0.23;
 float Angle_control_on_duty_threshold = 0.25;
+
 
 //PID object and etc.
 Filter acc_filter;
@@ -67,17 +68,6 @@ PID r_pid;
 PID phi_pid;
 PID theta_pid;
 PID psi_pid;
-
-WS2812 ledStrip(
-    RGBLED_PIN,         // Data line is connected to pin 0. (GP0)
-    RGBLED_LENGTH,      // Strip is 6 LEDs long.
-    pio0,               // Use PIO 0 for creating the state machine.
-    0,                  // Index of the state machine that will be created for controlling the LED strip
-                        // You can have 4 state machines per PIO-Block up to 8 overall.
-                        // See Chapter 3 in: https://datasheets.raspberrypi.org/rp2040/rp2040-datasheet.pdf
-    WS2812::FORMAT_GRB  // Pixel format used by the LED strip
-);
-
 
 void loop_400Hz(void);
 void rate_control(void);
@@ -92,11 +82,7 @@ uint8_t lock_com(void);
 uint8_t logdata_out_com(void);
 void printPQR(void);
 void servo_control(void);
-void rgbled_nomal(void);
-void rgbled_green(void);
-void rgbled_off(void);
-void rgbled(uint8_t);
-void rgbled_wait(void);
+float rocking_wings(float stick);
 
 #define AVERAGE 400
 #define KALMANWAIT 2000
@@ -208,11 +194,11 @@ void loop_400Hz(void)
         LockMode=3;//Disenable Flight
         led=0;
         gpio_put(LED_PIN,led);
-        rgbled(led);
+        rgbled_switch(led);
         return;
       }
       //Goto Flight
-      if(!Logflag)rgbled_nomal();
+      if(!Logflag)rgbled_normal();
     }
     else if(LockMode==3)
     {
@@ -224,7 +210,7 @@ void loop_400Hz(void)
     }
     //LED Blink
     gpio_put(LED_PIN, led);
-    rgbled(led);
+    rgbled_switch(led);
     if(Logflag==1&&LedBlinkCounter<100){
       LedBlinkCounter++;
     }
@@ -251,13 +237,13 @@ void loop_400Hz(void)
     OverG_flag = 0;
     if(LedBlinkCounter<10){
       gpio_put(LED_PIN, 1);
-      rgbled(1);
+      rgbled_switch(1);
       LedBlinkCounter++;
     }
     else if(LedBlinkCounter<100)
     {
       gpio_put(LED_PIN, 0);
-      rgbled(0);
+      rgbled_switch(0);
       LedBlinkCounter++;
     }
     else LedBlinkCounter=0;
@@ -298,7 +284,7 @@ void loop_400Hz(void)
     Logoutputflag=1;
     //LED Blink
     gpio_put(LED_PIN, led);
-    rgbled(led);
+    rgbled_switch(led);
     if(LedBlinkCounter<400){
       LedBlinkCounter++;
     }
@@ -331,6 +317,13 @@ void control_init(void)
   phi_pid.set_parameter  ( 2.5, 9.5, 0.005, 0.018, 0.01);//6.0
   theta_pid.set_parameter( 2.5, 9.5, 0.005, 0.018, 0.01);//6.0
   psi_pid.set_parameter  ( 0.0, 10000.0, 0.010, 0.002, 0.01);
+  //pid reset
+  p_pid.reset();
+  q_pid.reset();
+  r_pid.reset();
+  phi_pid.reset();
+  theta_pid.reset();
+  psi_pid.reset();
 
 /*
   //Rate control
@@ -372,7 +365,7 @@ uint8_t lock_com(void)
 uint8_t logdata_out_com(void)
 {
   static uint8_t chatta=0,state=0;
-  if( Chdata[4]<(CH5MAX+CH5MIN)*0.5 
+  if( Chdata[LOG]<(CH5MAX+CH5MIN)*0.5 
    && Chdata[2]<CH3MIN+80 
    && Chdata[0]<CH1MIN+80
    && Chdata[3]>CH4MAX-80 
@@ -415,6 +408,23 @@ void rate_control(void)
 
   //Read Sensor Value
   sensor_read();
+
+  //Mode SW
+  if (Chdata[MODE_SW]>1241)
+  {
+    Flight_mode = ROCKING;
+  }
+  else if (Chdata[MODE_SW]<804) 
+  {
+    Flight_mode = NORMAL;
+    Rocking_timer = 0.0;
+  }
+  else
+  {
+    Flight_mode = REDCIRCLE;
+    Rocking_timer = 0.0;
+  }
+  Flight_mode = REDCIRCLE;
 
   //Get Bias
   //Pbias = Xe(4, 0);
@@ -472,7 +482,7 @@ void rate_control(void)
   if (RL_duty > maximum_duty) RL_duty = maximum_duty;
 
   //Duty set
-  if(T_ref/BATTERY_VOLTAGE < Motor_on_duty_threshold)
+  if(T_ref/BATTERY_VOLTAGE < Motor_on_duty_threshold || Safty_flag != 0)
   {
     motor_stop();
     p_pid.reset();
@@ -555,6 +565,13 @@ void angle_control(void)
     Theta_ref = Theta_trim + 0.3 *M_PI*(float)(Chdata[1] - (CH2MAX+CH2MIN)*0.5)*2/(CH2MAX-CH2MIN);
     Psi_ref   = Psi_trim   + 0.8 *M_PI*(float)(Chdata[0] - (CH1MAX+CH1MIN)*0.5)*2/(CH1MAX-CH1MIN);
 
+    //Rocking Wings
+    //ロッキングウイングは時間で終了する。終了したら事前に得ているStick量がPhi_refになる．
+    if(Flight_mode == ROCKING)
+    {
+      Phi_ref = rocking_wings(Phi_ref);
+    }
+
     //Error
     phi_err   = Phi_ref   - (Phi   - Phi_bias);
     theta_err = Theta_ref - (Theta - Theta_bias);
@@ -588,16 +605,35 @@ void angle_control(void)
     //Logging
     logging();
 
+    //Red Circle Detecte check
+    read_red_sign();
+
     E_time2=time_us_32();
     D_time2=E_time2-S_time2;
 
   }
 }
 
+float rocking_wings(float stick)
+{
+  float angle=25;//[deg]
+  float f=2.0;//[Hz]
+
+  if(Rocking_timer<4.0)
+  {
+    Rocking_timer = Rocking_timer + 0.01;
+    rgbled_rocking();
+    return angle*M_PI/180*sin(f*2*M_PI*Rocking_timer);
+  }
+  rgbled_normal();
+  return stick;
+}
+
+
 void logging(void)
 {  
   //Logging
-  if(Chdata[4]>(CH5MAX+CH5MIN)*0.5)
+  if(Chdata[LOG]>(CH5MAX+CH5MIN)*0.5)
   { 
     if(Logflag==0)
     {
@@ -907,75 +943,6 @@ void kalman_filter(void)
   Omega_m << Wp, Wq, Wr;
   Z << Ax, Ay, Az, Mx, My, Mz;
   ekf(Xp, Xe, P, Z, Omega_m, Q, R, G*dt, Beta, dt);
-}
-
-void rgbled_nomal(void)
-{
-  ledStrip.setPixelColor(0, WS2812::RGB(128,128,0));
-  ledStrip.setPixelColor(1, WS2812::RGB(128,128,0));
-  ledStrip.setPixelColor(2, WS2812::RGB(128,128,0));
-  ledStrip.setPixelColor(3, WS2812::RGB(128,128,0));
-  ledStrip.setPixelColor(4, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(5, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(6, WS2812::RGB(128,0,128));
-  ledStrip.setPixelColor(7, WS2812::RGB(128,0,128));
-  ledStrip.setPixelColor(8, WS2812::RGB(0,0,128));
-  ledStrip.setPixelColor(9, WS2812::RGB(0,0,128));
-  ledStrip.show();
-}
-
-void rgbled_green(void)
-{
-  ledStrip.setPixelColor(0, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(1, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(2, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(3, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(4, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(5, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(6, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(7, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(8, WS2812::RGB(0,128,0));
-  ledStrip.setPixelColor(9, WS2812::RGB(0,128,0));
-  ledStrip.show();
-}
-
-void rgbled_off(void)
-{
-  ledStrip.setPixelColor(0, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(1, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(2, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(3, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(4, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(5, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(6, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(7, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(8, WS2812::RGB(0,0,0));
-  ledStrip.setPixelColor(9, WS2812::RGB(0,0,0));
-  ledStrip.show();
-}
-
-void rgbled(uint8_t flag)
-{
-  if (flag ==1)rgbled_green();
-  else rgbled_off();
-}
-
-void rgbled_wait(void)
-{
-  static uint8_t index=9;
-  static uint16_t counter = 0;
-  if(counter==0)
-  {
-    ledStrip.setPixelColor(index, WS2812::RGB(0,0,0));
-    if(index<10)index++;
-    else index=0;
-    ledStrip.setPixelColor(index, WS2812::RGB(0,0,50));
-    ledStrip.show();
-  }
-  counter ++;
-  if(counter==20)counter =0;
-
-
 }
 
 PID::PID()
