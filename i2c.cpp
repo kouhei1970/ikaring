@@ -21,25 +21,29 @@ void read_red_sign(void)
     int i2c_result;//正しく読み取れたかの判別
 
     //読み込み
-    i2c_result = i2c_read_timeout_us(I2C_PORT,OPENMV_ADDRESS,byteREAD,1,false,100);
+    //i2c_result = i2c_read_timeout_us(I2C_PORT,OPENMV_ADDRESS,byteREAD,1,false,500);
     //(i2cport,slave address,読み込むデータの格納用,実際に読み出すデータ量,writeと同じ,timeout)
+    byteREAD[0]= gpio_get(SDA_PIN);
 
     //正しく値を読み込めているかの判別
     if (i2c_result == PICO_ERROR_GENERIC){
-        // printf("generic error");
+        //printf("generic error\n");
     }
     else if (i2c_result == PICO_ERROR_TIMEOUT){
-        // printf("timeout error");
+        //printf("timeout error\n");
     }
     //正しく読み込めていた場合
     else{
-        if(i2c_result==0x01)
+        //printf("%d\n", byteREAD[0]);
+        if(byteREAD[0]==0)
         {
-            rgbled_red();
+            //rgbled_normal();
+            Red_flag = 0;
         }
         else
         {
-            rgbled_normal();
+            //rgbled_red();
+            Red_flag = 1;
         }
         
     }

@@ -16,11 +16,14 @@
 #include <math.h>
 
 #define LED_PIN 25
+//#define I2C_SDA 26
 #define MAINLOOP loop_400Hz
+
 
 //グローバル変数
 extern uint8_t Arm_flag;
 extern semaphore_t sem;
+extern uint8_t Red_flag;
 
 #endif
 

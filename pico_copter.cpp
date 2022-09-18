@@ -1,7 +1,8 @@
 #include "pico_copter.hpp"
 
 //グローバル変数
-uint8_t Arm_flag=0;
+uint8_t Arm_flag = 0;
+uint8_t Red_flag = 0;
 semaphore_t sem;
 
 int main(void)
@@ -9,8 +10,11 @@ int main(void)
   int start_wait=3;
   
   gpio_init(LED_PIN);
+  gpio_init(SDA_PIN);
   gpio_set_dir(LED_PIN, GPIO_OUT);
-  
+  gpio_set_dir(SDA_PIN, GPIO_IN);
+  gpio_set_pulls(SDA_PIN, true, false);
+
   //Initialize stdio for Pico
   stdio_init_all();
   
@@ -27,7 +31,7 @@ int main(void)
   rgbled_off();
 
   //Initialize I2C
-  copter_i2c_init();
+  //copter_i2c_init();
 
   //Initilize Control
   control_init();

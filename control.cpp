@@ -83,9 +83,44 @@ uint8_t logdata_out_com(void);
 void printPQR(void);
 void servo_control(void);
 float rocking_wings(float stick);
+void led_control(void);
 
 #define AVERAGE 400
 #define KALMANWAIT 2000
+
+//LED Control
+void led_control(void)
+{
+  static uint16_t cnt=0;
+  if (Arm_flag == 0 || Arm_flag == 1)
+  {
+    rgbled_wait();      
+  }
+  else if (Arm_flag ==2 && Flight_mode == ROCKING)
+  {
+    rgbled_rocking();
+  }
+  else if (Arm_flag == 2 && Red_flag == 0 && Logflag == 0)
+  {
+    rgbled_normal();
+  }
+  else if (Arm_flag == 2 && Red_flag == 1)
+  {
+    rgbled_red();
+  }
+  else if (Arm_flag == 2 && Red_flag == 0 && Logflag ==1)
+  {
+    rgbled_orange();
+  }
+  else if (Arm_flag == 3)
+  {
+    if (cnt == 0)rgbled_green();
+    if (cnt == 50)rgbled_off();
+    cnt++;
+    if (cnt==100)cnt = 0;
+  }
+
+}
 
 //Main loop
 //This function is called from PWM Intrupt on 400Hz.
@@ -100,10 +135,13 @@ void loop_400Hz(void)
   //Servo Control
   servo_control();
 
+  //LED Control
+  led_control();
+
   if (Arm_flag==0)
   {
       //motor_stop();
-      rgbled_wait();
+      //rgbled_wait();
       Elevator_center = 0.0;
       Aileron_center = 0.0;
       Rudder_center = 0.0;
@@ -118,7 +156,7 @@ void loop_400Hz(void)
   else if (Arm_flag==1)
   {
     motor_stop();
-    rgbled_wait();
+    //rgbled_wait();
     //Gyro Bias Estimate
     if (BiasCounter < AVERAGE)
     {
@@ -178,6 +216,7 @@ void loop_400Hz(void)
     }
     else
     {
+      //Arm_flag = 2;/////////////////////////////////////////////////////////////////////////////
       Arm_flag = 3;
       Phi_bias   = Phi_bias/KALMANWAIT;
       Theta_bias = Theta_bias/KALMANWAIT;
@@ -194,11 +233,11 @@ void loop_400Hz(void)
         LockMode=3;//Disenable Flight
         led=0;
         gpio_put(LED_PIN,led);
-        rgbled_switch(led);
+        //rgbled_switch(led);
         return;
       }
       //Goto Flight
-      if(!Logflag)rgbled_normal();
+      //if(!Logflag)rgbled_normal();
     }
     else if(LockMode==3)
     {
@@ -210,7 +249,7 @@ void loop_400Hz(void)
     }
     //LED Blink
     gpio_put(LED_PIN, led);
-    rgbled_switch(led);
+    //if(Logflag==1)rgbled_switch(led);
     if(Logflag==1&&LedBlinkCounter<100){
       LedBlinkCounter++;
     }
@@ -237,13 +276,13 @@ void loop_400Hz(void)
     OverG_flag = 0;
     if(LedBlinkCounter<10){
       gpio_put(LED_PIN, 1);
-      rgbled_switch(1);
+      //rgbled_switch(1);
       LedBlinkCounter++;
     }
     else if(LedBlinkCounter<100)
     {
       gpio_put(LED_PIN, 0);
-      rgbled_switch(0);
+      //rgbled_switch(0);
       LedBlinkCounter++;
     }
     else LedBlinkCounter=0;
@@ -268,6 +307,7 @@ void loop_400Hz(void)
       {
         LockMode=2;//Enable Flight
         Arm_flag=2;
+        //rgbled_normal();
       }
       return;
     }
@@ -424,7 +464,7 @@ void rate_control(void)
     Flight_mode = REDCIRCLE;
     Rocking_timer = 0.0;
   }
-  Flight_mode = REDCIRCLE;
+  //////////////////////////////////////////////////Flight_mode = REDCIRCLE;
 
   //Get Bias
   //Pbias = Xe(4, 0);
@@ -606,10 +646,11 @@ void angle_control(void)
     logging();
 
     //Red Circle Detecte check
-    read_red_sign();
+    if (Flight_mode == REDCIRCLE) read_red_sign();
 
     E_time2=time_us_32();
     D_time2=E_time2-S_time2;
+    printf("%d\n", D_time2);
 
   }
 }
@@ -617,7 +658,7 @@ void angle_control(void)
 float rocking_wings(float stick)
 {
   float angle=25;//[deg]
-  float f=2.0;//[Hz]
+  float f=5.0;//[Hz]
 
   if(Rocking_timer<4.0)
   {

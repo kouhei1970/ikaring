@@ -7,6 +7,7 @@
 #include "hardware/i2c.h"
 #include "pico/binary_info.h"
 #include "rgbled.hpp"
+#include "pico_copter.hpp"
 
 #define I2C_PORT i2c1
 #define OPENMV_ADDRESS 0x12
