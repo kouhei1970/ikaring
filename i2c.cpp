@@ -20,32 +20,36 @@ void read_red_sign(void)
     byteWRITE[1] = 1;
     int i2c_result;//正しく読み取れたかの判別
 
+    //printf("i2c call ");
     //読み込み
-    //i2c_result = i2c_read_timeout_us(I2C_PORT,OPENMV_ADDRESS,byteREAD,1,false,500);
-    //(i2cport,slave address,読み込むデータの格納用,実際に読み出すデータ量,writeと同じ,timeout)
-    byteREAD[0]= gpio_get(SDA_PIN);
+    if (/*i2c_get_read_available(I2C_PORT)*/1)
+    {
+        //printf("i2c available ");
+        i2c_result = i2c_read_blocking(I2C_PORT,OPENMV_ADDRESS,byteREAD,1,false);
+        //(i2cport,slave address,読み込むデータの格納用,実際に読み出すデータ量,writeと同じ,timeout)
+        //byteREAD[0]= gpio_get(SDA_PIN);
 
-    //正しく値を読み込めているかの判別
-    if (i2c_result == PICO_ERROR_GENERIC){
-        //printf("generic error\n");
-    }
-    else if (i2c_result == PICO_ERROR_TIMEOUT){
-        //printf("timeout error\n");
-    }
-    //正しく読み込めていた場合
-    else{
-        //printf("%d\n", byteREAD[0]);
-        if(byteREAD[0]==0)
-        {
-            //rgbled_normal();
-            Red_flag = 0;
+        //正しく値を読み込めているかの判別
+        if (i2c_result == PICO_ERROR_GENERIC){
+            //printf("generic error ");
         }
-        else
-        {
-            //rgbled_red();
-            Red_flag = 1;
+        else if (i2c_result == PICO_ERROR_TIMEOUT){
+            //printf("timeout error ");
         }
-        
-    }
+        //正しく読み込めていた場合
+        else{
+            //printf("%d ", byteREAD[0]);
+            if(byteREAD[0]==0)
+            {
+                //rgbled_normal();
+                Red_flag = 0;
+            }
+            else
+            {
+                //rgbled_red();
+                Red_flag = 1;
+            }       
+        }
 
+    }
 }

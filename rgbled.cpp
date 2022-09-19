@@ -94,6 +94,7 @@ void rgbled_rocking(void)
     }
     else
     {
+      state = 0;
       ledStrip.setPixelColor(0, WS2812::RGB(255,255,255));
       ledStrip.setPixelColor(1, WS2812::RGB(255,255,255));
       ledStrip.setPixelColor(2, WS2812::RGB(255,255,255));
@@ -108,7 +109,7 @@ void rgbled_rocking(void)
     }  
   }
   cnt++;
-  if (cnt == 25) cnt = 0;
+  if (cnt == 80) cnt = 0;
 }
 
 

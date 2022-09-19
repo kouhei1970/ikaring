@@ -13,6 +13,7 @@ uint8_t AngleControlCounter=0;
 uint16_t RateControlCounter=0;
 uint16_t BiasCounter=0;
 uint16_t LedBlinkCounter=0;
+uint8_t RedCounter = 0;
 
 //Control 
 float FR_duty, FL_duty, RR_duty, RL_duty;
@@ -259,9 +260,19 @@ void loop_400Hz(void)
       led=!led;
     }
    
+    S_time2=time_us_32();
+
     //Rate Control (400Hz)
     rate_control();
    
+    //Red Circle Detecte check(23Hz)
+    if (RedCounter == 0)
+    {
+      if (Flight_mode == REDCIRCLE) read_red_sign();
+    }
+    RedCounter++;
+    if(RedCounter==17) RedCounter = 0;
+
     if(AngleControlCounter==4)
     {
       AngleControlCounter=0;
@@ -336,6 +347,7 @@ void loop_400Hz(void)
   }
   E_time=time_us_32();
   D_time=E_time-S_time;
+  //printf("%d Red_flag=%d\n", D_time, Red_flag);/////////////////////////////////////////////////////
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -450,13 +462,16 @@ void rate_control(void)
   sensor_read();
 
   //Mode SW
+  //Chdata[MODE_SW]=1000;///////////////////////////////////////////////////////////////////////////
   if (Chdata[MODE_SW]>1241)
   {
     Flight_mode = ROCKING;
+    Red_flag = 0;
   }
   else if (Chdata[MODE_SW]<804) 
   {
     Flight_mode = NORMAL;
+    Red_flag = 0;
     Rocking_timer = 0.0;
   }
   else
@@ -464,7 +479,7 @@ void rate_control(void)
     Flight_mode = REDCIRCLE;
     Rocking_timer = 0.0;
   }
-  //////////////////////////////////////////////////Flight_mode = REDCIRCLE;
+  //Flight_mode = REDCIRCLE;///////////////////////////////////////////////////////////////////////
 
   //Get Bias
   //Pbias = Xe(4, 0);
@@ -585,7 +600,7 @@ void angle_control(void)
   {
     sem_acquire_blocking(&sem);
     sem_reset(&sem, 0);
-    S_time2=time_us_32();
+    //S_time2=time_us_32();
     kalman_filter();
     q0 = Xe(0,0);
     q1 = Xe(1,0);
@@ -645,12 +660,9 @@ void angle_control(void)
     //Logging
     logging();
 
-    //Red Circle Detecte check
-    if (Flight_mode == REDCIRCLE) read_red_sign();
-
-    E_time2=time_us_32();
-    D_time2=E_time2-S_time2;
-    printf("%d\n", D_time2);
+    //E_time2=time_us_32();
+    //D_time2=E_time2-S_time2;
+    //printf("%d\n", D_time2);
 
   }
 }
@@ -660,7 +672,7 @@ float rocking_wings(float stick)
   float angle=25;//[deg]
   float f=5.0;//[Hz]
 
-  if(Rocking_timer<4.0)
+  if(Rocking_timer<2.0)
   {
     Rocking_timer = Rocking_timer + 0.01;
     rgbled_rocking();
