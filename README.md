@@ -1,5 +1,7 @@
 # ikaring(pico_copter)
-Flightcontrol system for quadcopter using Raspberry Pi Pico
+[第18回全日本室内飛行ロボットコンテスト](http://indoor-flight.com/)に出場したイカリングのフライトコントロールプログラムです
+
+内容は[Pico_copter](https://github.com/kouhei1970/pico_copter)のブランチと言って良いものです。
 
 ### Raspberry Pi Pico
 使用しているマイコンは安価なRaspberry Pi Picoです
