@@ -1,4 +1,5 @@
 # ikaring(pico_copter)
+[ikaring img](ikaring.jpeg)
 
 [第18回全日本室内飛行ロボットコンテスト](http://indoor-flight.com/)に出場したイカリングのフライトコントロールプログラムです
 
