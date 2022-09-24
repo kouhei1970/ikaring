@@ -55,11 +55,9 @@ uint8_t LockMode=0;
 uint8_t OverG_flag = 0;
 uint8_t Flight_mode = 0;//0:Normal 1:Rocking wings 2:Landing
 float Rocking_timer = 0.0;
-//float Flight_duty  =0.18;//0.2/////////////////
-float Motor_on_duty_threshold = 0.2;
-float Rate_control_on_duty_threshold = 0.23;
+float Motor_on_duty_threshold = 0.1;//スラストカットの閾値
 float Angle_control_on_duty_threshold = 0.25;
-
+uint8_t Takeoff_flag = 0;//一度離陸したらスラストをカットするまで1，スラストをカットしたら0
 
 //PID object and etc.
 Filter acc_filter;
@@ -101,15 +99,15 @@ void led_control(void)
   {
     rgbled_rocking();
   }
-  else if (Arm_flag == 2 && Red_flag == 0 && Logflag == 0)
-  {
-    rgbled_normal();
-  }
   else if (Arm_flag == 2 && Red_flag == 1)
   {
     rgbled_red();
   }
-  else if (Arm_flag == 2 && Red_flag == 0 && Logflag ==1)
+  else if (Arm_flag == 2 && Red_flag == 0 && Logflag == 0)
+  {
+    rgbled_normal();
+  }
+  else if (Arm_flag == 2 && Red_flag == 0 && Logflag == 1)
   {
     rgbled_orange();
   }
@@ -217,7 +215,7 @@ void loop_400Hz(void)
     }
     else
     {
-      //Arm_flag = 2;/////////////////////////////////////////////////////////////////////////////
+      //Arm_flag = 2;//本番はコメントにする///////////////////////////////////////////////////////////////////////////
       Arm_flag = 3;
       Phi_bias   = Phi_bias/KALMANWAIT;
       Theta_bias = Theta_bias/KALMANWAIT;
@@ -347,7 +345,7 @@ void loop_400Hz(void)
   }
   E_time=time_us_32();
   D_time=E_time-S_time;
-  //printf("%d Red_flag=%d\n", D_time, Red_flag);/////////////////////////////////////////////////////
+  //printf("%d Red_flag=%d\n", D_time, Red_flag);//本番はコメントにする///////////////////////////////////////////////////
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -376,17 +374,6 @@ void control_init(void)
   phi_pid.reset();
   theta_pid.reset();
   psi_pid.reset();
-
-/*
-  //Rate control
-  p_pid.set_parameter( 2.0, 0.145, 0.028, 0.015, 0.0025);//3.4
-  q_pid.set_parameter( 2.1, 0.125, 0.028, 0.015, 0.0025);//3.8
-  r_pid.set_parameter(12.0, 0.5, 0.008, 0.015, 0.0025);//9.4
-  //Angle control
-  phi_pid.set_parameter  ( 5.5, 9.5, 0.025, 0.018, 0.01);//6.0
-  theta_pid.set_parameter( 5.5, 9.5, 0.025, 0.018, 0.01);//6.0
-  psi_pid.set_parameter  ( 0.0, 10.0, 0.010, 0.03, 0.01);
-*/
 
 }
 
@@ -462,7 +449,7 @@ void rate_control(void)
   sensor_read();
 
   //Mode SW
-  //Chdata[MODE_SW]=1000;///////////////////////////////////////////////////////////////////////////
+  //Chdata[MODE_SW]=1000;//本番はコメントにする/////////////////////////////////////////////////////////////////////////
   if (Chdata[MODE_SW]>1241)
   {
     Flight_mode = ROCKING;
@@ -479,7 +466,7 @@ void rate_control(void)
     Flight_mode = REDCIRCLE;
     Rocking_timer = 0.0;
   }
-  //Flight_mode = REDCIRCLE;///////////////////////////////////////////////////////////////////////
+  //Flight_mode = REDCIRCLE;//本番はコメントにする/////////////////////////////////////////////////////////////////////
 
   //Get Bias
   //Pbias = Xe(4, 0);
@@ -552,21 +539,9 @@ void rate_control(void)
     Phi_bias   = Phi;
     Theta_bias = Theta;
     Psi_bias   = Psi;
-  }
-  /*
-  else if(T_ref/BATTERY_VOLTAGE < Rate_control_on_duty_threshold)
-  {
-    if (OverG_flag==0){
-      set_duty_fr(FR_duty);
-      set_duty_fl(FL_duty);
-      set_duty_rr(RR_duty);
-      set_duty_rl(RL_duty);      
-    }
-    Pref=0.0;
-    Qref=0.0;
-    Rref=0.0;
-  }
-  */
+
+    Takeoff_flag = 0; //着陸時は0になる
+  } 
   else
   {
     if (OverG_flag==0){
@@ -632,8 +607,8 @@ void angle_control(void)
     theta_err = Theta_ref - (Theta - Theta_bias);
     psi_err   = Psi_ref   - (Psi   - Psi_bias);
     
-    //PID Control
-    if (T_ref/BATTERY_VOLTAGE < Angle_control_on_duty_threshold)
+    //Angle PID Control
+    if (T_ref/BATTERY_VOLTAGE < Angle_control_on_duty_threshold && Takeoff_flag==0)
     {
       Pref=0.0;
       Qref=0.0;
@@ -652,6 +627,7 @@ void angle_control(void)
     }
     else
     {
+      Takeoff_flag = 1;
       Pref = phi_pid.update(phi_err);
       Qref = theta_pid.update(theta_err);
       Rref = Psi_ref;//psi_pid.update(psi_err);//Yawは角度制御しない
@@ -789,7 +765,6 @@ void log_output(void)
     LogdataCounter=0;
   }
 }
-
 
 void gyroCalibration(void)
 {
@@ -975,6 +950,7 @@ void output_data(void)
             //,mag_norm
         ); //20
 }
+
 void output_sensor_raw_data(void)
 {
   printf("%9.3f,"
